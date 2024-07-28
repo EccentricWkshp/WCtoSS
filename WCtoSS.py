@@ -118,22 +118,66 @@ def wc_order_to_ss_order(wc_order):
 
     return ss_order
 
+def fetch_existing_shipstation_orders(ss, store_id):
+    existing_orders = set()
+    statuses = ['awaiting_payment', 'awaiting_shipment', 'shipped', 'on_hold', 'cancelled']
+
+    for status in statuses:
+        page = 1
+        while True:
+            response = ss.fetch_orders(parameters={'store_id': store_id, 'order_status': status, 'page': page})
+            if response.status_code != 200:
+                print(f"Error fetching ShipStation orders: {response.status_code}")
+                break
+
+            data = response.json()
+            for order in data['orders']:
+                existing_orders.add(str(order['orderNumber']))
+
+            if page >= data['pages']:
+                break
+            page += 1
+
+    return existing_orders
+
 def main():
     wc_orders = get_woocommerce_orders()
     if wc_orders is None:
         print("Failed to retrieve orders from WooCommerce.")
         return
 
+    # Initialize ShipStation client
+    ss = ShipStation(key=config['shipstation']['api_key'], secret=config['shipstation']['api_secret'])
+    ss.debug = config['SS_Debug']
+
+    # Get WooCommerce store ID
+    WC_store_id = get_woocommerce_store_id()
+    if WC_store_id is None:
+        print("Cannot proceed without a valid WooCommerce store ID.")
+        return
+
+    # Fetch existing ShipStation orders
+    existing_orders = fetch_existing_shipstation_orders(ss, WC_store_id)
+
+    new_orders = []
     for wc_order in wc_orders:
+        if str(wc_order.order_number) not in existing_orders:
+            new_orders.append(wc_order)
+        else:
+            print(f"Skipping duplicate order: {wc_order.order_number}")
+
+    print(f"Found {len(new_orders)} new orders to process.")
+
+    for wc_order in new_orders:
         ss_order = wc_order_to_ss_order(wc_order)
         ss.add_order(ss_order)
 
     if SS_Submit_Orders:
         print("Submitting orders to ShipStation...")
         ss.submit_orders()
-        print(f"Submitted {len(wc_orders)} orders to ShipStation.")
+        print(f"Submitted {len(new_orders)} orders to ShipStation.")
     else:
-        print(f"Configured to not submit orders. {len(wc_orders)} orders processed but not submitted.")
+        print(f"Configured to not submit orders. {len(new_orders)} orders processed but not submitted.")
 
 if __name__ == "__main__":
     main()
