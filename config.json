@@ -1,0 +1,15 @@
+{
+  "woocommerce": {
+    "store_url": "",
+    "consumer_key": "",
+    "consumer_secret": ""
+  },
+  "shipstation": {
+    "api_key": "",
+    "api_secret": "",
+	"WCstoreID": ""
+  },
+  "SS_Submit_Orders": true,
+  "SS_Debug": false,
+  "WC_Debug": false
+}
