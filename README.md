@@ -35,6 +35,11 @@ WCtoSS is a Python-based tool that automates the process of fetching orders from
    pip install -r requirements.txt
    ```
 
+4. Set up cron job (optional to automatically run every 15 minutes):
+   ```
+   */15 * * * *    root    (echo "Start: $(date)" && cd /home/pi/WCtoSS && . venv/bin/activate && python3 WCtoSS.py && echo "End: $(date)" && echo) >> /home/pi/WCtoSS/log.log 2>&1
+   ```
+
 ## Configuration
 
 1. Copy the `config.json.example` file to `config.json`:
